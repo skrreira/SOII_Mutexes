@@ -30,7 +30,8 @@ int sum_pares = 0;  //Sumas
 int sum_impares = 0;
 
 // Duración de los sleep:
-int duracion_sleep;
+int duracion_sleep_prod;
+int duracion_sleep_cons;
 
 // Mútexes y variables de condición:
 pthread_mutex_t mutex;
@@ -53,11 +54,12 @@ void* consumidor(void *arg);
 int main(int argc, char** argv) {
 
     // Procesamos argumentos:
-    if (argc != 2){
-        printf("ERROR: Número de argumentos incorrecto. | Usage: %s int1.", &argv[0]);
+    if (argc != 3){
+        printf("ERROR: Número de argumentos incorrecto. | Usage: %s t_prod t_cons.", argv[0]);
         exit(EXIT_FAILURE);
     }
-    duracion_sleep = atoi(argv[1]);
+    duracion_sleep_prod = atoi(argv[1]);
+    duracion_sleep_cons = atoi(argv[1]);
 
     // Inicializamos buffer LIFO:
     pila.buffer_count = 0;
@@ -136,7 +138,7 @@ void *productor(void *arg) {
 
         // Producción de items
         int item = rand() % 10;
-        sleep(duracion_sleep); // Tiempo de producción
+        sleep(duracion_sleep_prod); // Tiempo de producción
         printf("Productor %d: Produciendo item %d\n", id, item);
 
         // Bloqueamos el mútex:
@@ -186,11 +188,15 @@ void *consumidor(void *arg) {
 
     // Bucle para consumir indefinidamente.
     while (1) {
-        // Si los productores han terminado, salimos:
-        if (prod_terminados == 1) exit(EXIT_SUCCESS);
 
         // Bloqueamos el mútex:
         pthread_mutex_lock(&mutex);
+
+        // Si los productores han terminado, salimos:
+        if (prod_terminados == 1){
+            pthread_mutex_unlock(&mutex);
+            break;
+        } 
         
         // Esperamos a la variable de condición:
         while (pila.buffer_count <= 0) {
