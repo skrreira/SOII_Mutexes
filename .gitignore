@@ -1,0 +1,41 @@
+# Excluir archivos de configuración de VS Code
+.vscode/
+*.code-workspace
+
+# Excluir directorios de salida de compilación
+bin/
+obj/
+out/
+build/
+dist/
+
+# Excluir archivos de ejecución y paquetes
+*.exe
+*.dll
+*.so
+*.dylib
+*.o
+*.a
+
+# Excluir archivos de paquetes y logs
+*.log
+*.log.*
+*.bak
+*.tmp
+*.cache
+
+# Excluir archivos específicos de sistemas operativos
+.DS_Store       # Archivos específicos de macOS
+Thumbs.db       # Archivos específicos de Windows
+desktop.ini     # Archivos específicos de Windows
+
+# Excluir archivos de paquetes y dependencias
+node_modules/
+packages/
+*.pyc
+__pycache__/
+
+# Excluir archivos de configuración y claves privadas
+*.env
+*.key
+*.pem
