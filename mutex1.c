@@ -1,5 +1,3 @@
-//TODO: Faltan los SLEEPS
-//TODO: 2 argumentos, SLEEP para prod. y uno para cons,
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -150,18 +148,21 @@ void *productor(void *arg) {
         // Agregar item al buffer
         pila.buffer[pila.buffer_count] = item;
         pila.buffer_count++;
+        sleep(duracion_sleep_prod); //Tiempo de agregación
         printf("Productor %d: Agregando item %d al buffer\n", id, item);
-    
+
+        // Cambiamos variable de condición y desbloqueamos mútex:
+        pthread_cond_signal(&can_consume);
+        pthread_mutex_unlock(&mutex);
+
         // Aumentamos el número de items producidos
         items_produced++;
     }
 
+    
+    //TODO: TIENE QUE HABER UN MUTEX MÁS - TRYLOCK
     // Imprimimos que la tarea obligatoria está completa:
-    printf("Productor %d: Tarea obligatoria realizada. Desbloqueamos mútex. Sumatorio de valores pares.\n", id);
-
-    // Cambiamos variable de condición y desbloqueamos mútex:
-    pthread_cond_signal(&can_consume);
-    pthread_mutex_unlock(&mutex);
+    printf("Productor %d: Tarea obligatoria realizada. Desbloqueamos mútex. Sumatorio de valores pares.\n", id);    
 
     // Calculamos número de elementos de T a sumar (aleatorio entre 2 y 4):
     int num_suma = 2 + (rand()%2);
@@ -175,9 +176,11 @@ void *productor(void *arg) {
 
         // Aumentamos el índice:
         ind_pares += 2;
+        i++;
     }
 
     // Mensaje de éxito:
+    sleep(duracion_sleep_prod);
     printf("Productor %d: Suma de pares completada: %d\n", id, sum_pares);
 }
 
@@ -190,7 +193,7 @@ void *consumidor(void *arg) {
     while (1) {
 
         // Bloqueamos el mútex:
-        pthread_mutex_lock(&mutex);
+        pthread_mutex_lock(&mutex); 
 
         // Si los productores han terminado, salimos:
         if (prod_terminados == 1){
@@ -204,12 +207,14 @@ void *consumidor(void *arg) {
         }
 
         // Extraemos un item del buffer
-        int item = pila.buffer[pila.buffer_count];
-        printf("Extractor: Extrayendo item %d del buffer\n", item);
+        int item = pila.buffer[pila.buffer_count - 1];
+        sleep(duracion_sleep_cons);
+        printf("Consumidor %d: Extrayendo item %d del buffer\n", id, item);
 
         // Consumimos ítem (bajamos count):
         pila.buffer_count = pila.buffer_count - 1;
-        printf("Consumidor: Consumiendo item %d del buffer\n", item);
+        sleep(duracion_sleep_cons);
+        printf("Consumidor: %d Consumiendo item %d del buffer\n", id, item);
 
         // Imprimimos que la tarea obligatoria está completa:
         printf("Consumidor %d: Tarea obligatoria realizada. Desbloqueamos mútex. Sumatorio de valores impares.\n", id);
@@ -229,9 +234,14 @@ void *consumidor(void *arg) {
 
             // Aumentamos el índice:
             ind_impares += 2;
+            i++;
         }
 
     // Mensaje de éxito:
-    printf("Consumidor %d: Suma de impares completada: %d\n", id, sum_pares);
+    sleep(duracion_sleep_cons);
+    printf("Consumidor %d: Suma de impares completada: %d\n", id, sum_impares);
     }
+
+
+    //TODO: SI ES EL ÚLTIMO CONSUMIDOR HAY Q HACER UN BROADCAST AL RESTO PARA QUE SE DESPIERTEN: 8 * P
 }
