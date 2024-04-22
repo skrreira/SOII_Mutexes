@@ -5,10 +5,11 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <unistd.h>
+#include <time.h>
 
 
 //Constantes
-#define P 2 // productores //cuando cambie a linea de comando usar reserva dinamica
+#define P 4 // productores //cuando cambie a linea de comando usar reserva dinamica
 #define C 2// consumidores
 #define N 10 // tama~no del buffer
 #define TAM_A (P*100) //tamaño array A
@@ -44,8 +45,6 @@ int sleepSumaC = 1;
 pthread_mutex_t mutex;
 pthread_mutex_t mutexSumaProd;
 pthread_mutex_t mutexSumaCons;
-pthread_cond_t condProd;
-pthread_cond_t condCons;
 
 /*FUNCIÓN PARA INICIALIZAR EL BUFFER A -1*/
 void inicializar() {
@@ -112,37 +111,45 @@ void sumaConsumidor(int id) {
     //printf("Consumidor[ID:%d]: suma actual = %d\n",id,sumaCons);
 }
 
+/*FUNCION PARA CODIGO OPTATIVO*/
+/*FUNCION QUE DUERME UN PROCESO DURANTE UN TIEMPO*/
+void dormirProceso(struct timespec *req) {
+    nanosleep(req, NULL);
+}
+
 /*FUNCIÓN QUE DEFINE EL COMPORTAMIENTO DEL PRODUCTOR*/
 void *productor(void *arg) {
     int i;
     int item = -1;
     int id = *(int *) arg;
-    int mostrarSuma = 1;
     printf("Productor %d creado\n",id);
     for (i = 0; i <ITEMS_BY_P || posA<TAM_A; i++) {
         if(i<ITEMS_BY_P){
             if (item == -1)item = produce_item(i);
             pthread_mutex_lock(&mutex); // entramos a la region critica
-            while (posBuffer == N - 1)pthread_cond_wait(&condProd, &mutex);
+            while (posBuffer == N - 1){
+                pthread_mutex_unlock(&mutex); //desbloqueamos el mutex ya que no podemos acceder
+                //dormimos el hilo
+                // Establecemos el tiempo de espera
+                struct timespec sleep_time;
+                sleep_time.tv_sec = 0;
+                sleep_time.tv_nsec = 1000000;  // 1 ms
+                dormirProceso(&sleep_time);
+                // Bloqueamos el mutex antes de volver a comprobar la condición
+                pthread_mutex_lock(&mutex);
+            }
             insert_item(item);
             printf("El productor %d ha insertado el elemento %d en la posición %d\n", id, item,posBuffer);
             item = -1;
-            pthread_cond_signal(&condCons);
             pthread_mutex_unlock(&mutex);
         }
 
         if (!pthread_mutex_trylock(&mutexSumaProd)) {
-            sumaProductor(id);
-            pthread_mutex_unlock(&mutexSumaProd);
-        }
-        if(mostrarSuma) {
-            if(posA == TAM_A) {
-                printf("Productor %d --- suma contribuida: %d, posicion final %d\n", id, sumaProd, posA);
-                mostrarSuma = 0;
-            }
+           sumaProductor(id);
+           pthread_mutex_unlock(&mutexSumaProd);
         }
     }
-    printf("Productor %d --- TERMINADO\n", id);
+    printf("Productor %d --- suma contribuida: %d, posicion final %d\n", id, sumaProd,posA);
     pthread_exit(NULL);//Finalizamos la ejecución del hilo productor
 }
 
@@ -151,29 +158,31 @@ void *consumidor(void *argC) {
     int i;
     int item;
     int idC = *(int *) argC;
-    int mostrarSuma = 1;
     printf("Consumidor %d creado\n",idC);
     for (i = 0; i <ITERACIONES_CONSUMER || posB<TAM_B ; i++) {
         if(i<ITERACIONES_CONSUMER){
             pthread_mutex_lock(&mutex); // entramos a la region critica
-            while (posBuffer == -1)pthread_cond_wait(&condCons, &mutex);
+            while (posBuffer == -1){
+                pthread_mutex_unlock(&mutex); //desbloqueamos el mutex ya que no podemos acceder
+                //dormimos el hilo
+                // Establecemos el tiempo de espera
+                struct timespec sleep_time;
+                sleep_time.tv_sec = 0;
+                sleep_time.tv_nsec = 1000000;  // 1 ms
+                dormirProceso(&sleep_time);
+                // Bloqueamos el mutex antes de volver a comprobar la condición
+                pthread_mutex_lock(&mutex);
+            }
             item = consume_item();
             printf("El consumidor %d ha consumido el elemento %d en la posición %d\n", idC, item, posBuffer + 1);
-            pthread_cond_signal(&condProd);
             pthread_mutex_unlock(&mutex);
         }
         if (!pthread_mutex_trylock(&mutexSumaCons)) {
             sumaConsumidor(idC);
             pthread_mutex_unlock(&mutexSumaCons);
         }
-        if(mostrarSuma) {
-            if (posB == TAM_B) {
-                printf("Consumidor %d --- suma contribuida: %d,posicion final %d\n", idC, sumaCons, posB);
-                mostrarSuma = 0;
-            }
-        }
     }
-    printf("Consumidor %d --- TERMINADO\n", idC);
+    printf("Consumidor %d --- suma contribuida: %d,posicion final %d\n", idC, sumaCons,posB);
     pthread_exit(NULL);//Finalizamos la ejecución del hilo productor
 }
 
@@ -219,15 +228,7 @@ int main(int argc, char ** argv) {
         printf("Error al crear mutex\n");
         exit(EXIT_FAILURE);
     }
-
-    if (pthread_cond_init(&condProd, 0) != 0) {
-        printf("Error al crear variable de conducion productor.\n");
-        exit(EXIT_FAILURE);
-    }
-    if (pthread_cond_init(&condCons, 0) != 0) {
-        printf("Error al crear variable de conducion consumidor.\n");
-        exit(EXIT_FAILURE);
-    }
+    
     int argumentos[P];
     //Creacion productores
     for (int i = 0; i < P; i++) {
@@ -254,8 +255,6 @@ int main(int argc, char ** argv) {
     pthread_mutex_destroy(&mutex);
     pthread_mutex_destroy(&mutexSumaProd);
     pthread_mutex_destroy(&mutexSumaCons);
-    pthread_cond_destroy(&condProd);
-    pthread_cond_destroy(&condCons);
     return 0;
 }
 
