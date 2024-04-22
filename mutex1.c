@@ -3,8 +3,8 @@
 #include <unistd.h>
 #include <pthread.h>
 
-#define P 5 // productores
-#define C 4 // consumidores
+#define P 1 // productores
+#define C 2 // consumidores
 #define N 12 // Tamaño del buffer
 #define T_SIZE (110 * (P + C)) // Tamaño del array T: se hara la suma
 
@@ -114,7 +114,7 @@ int main(int argc, char** argv) {
     }
         
     // Creamos los consumidores:
-    for (i; i < P + C; i++) {
+    for (; i < P + C; i++) {
         tid[i] = i;
         pthread_create(&consumidores[i - P], NULL, consumidor, &tid[i]);
     }    
@@ -215,8 +215,8 @@ void *productor(void *arg) {
 
 void *consumidor(void *arg) {
 
-    // Cast
-    int id = *((int *)arg);
+    // Ponemos -1 para ajustar el indice a 0 y 1
+    int id = *((int *)arg) - 1;
 
     // Bucle para consumir indefinidamente.
     while (1) {
@@ -247,7 +247,7 @@ void *consumidor(void *arg) {
         elementos_consumidos--;
 
         // Imprimimos que la tarea obligatoria está completa:
-        printf("Consumidor %d: Tarea obligatoria realizada. Desbloqueamos mútex. Sumatorio de valores impares.\n", id);
+        printf("Consumidor %d: Tarea obligatoria realizada. Desbloqueamos mútex. Sumatorio de valores impares.\n", id );
 
         // Desbloqueamos mútex y variable de condición:
         pthread_mutex_unlock(&mutex);
