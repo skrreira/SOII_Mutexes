@@ -8,10 +8,18 @@
 #define N 12 // Tamaño del buffer
 #define T_SIZE (110 * (P + C)) // Tamaño del array T
 
+/**
+ * Estructura que funcionará como pila LIFO
+ * @param buffer: Buffer de la pila
+ * @param buffer_count: Número de elementos en el buffer
+ */
 struct pilaLIFO {
     int buffer[N];
     int buffer_count;
 } pila;
+
+
+// Inicializacion
 
 int T[T_SIZE];
 int ind_pares = 0;

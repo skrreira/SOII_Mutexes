@@ -1,0 +1,162 @@
+\documentclass[a4paper,twocolumn]{article}
+
+
+\usepackage[sc]{mathpazo} % Use the Palatino font
+\usepackage[T1]{fontenc} % Use 8-bit encoding that has 256 glyphs
+\usepackage[utf8]{inputenc} % Use utf-8 as encoding
+\linespread{1.05} % Line spacing - Palatino needs more space between lines
+\usepackage{microtype} % Slightly tweak font spacing for aesthetics
+\usepackage{graphicx}
+
+\usepackage[spanish]{babel} % Language hyphenation and typographical rules
+%\usepackage[galician]{babel} % Change to this if using galician
+
+\usepackage[hmarginratio=1:1,top=32mm,columnsep=20pt]{geometry} % Document margins
+\usepackage[hang, small,labelfont=bf,up,textfont=it,up]{caption} % Custom captions under/above floats in tables or figures
+\usepackage{booktabs} % Horizontal rules in tables
+
+\usepackage{enumitem} % Customized lists
+\setlist[itemize]{noitemsep} % Make itemize lists more compact
+
+\usepackage{abstract} % Allows abstract customization
+\renewcommand{\abstractnamefont}{\normalfont\bfseries} % Set the "Abstract" text to bold
+\renewcommand{\abstracttextfont}{\normalfont\small\itshape} % Set the abstract itself to small italic text
+
+\usepackage{titlesec} % Allows customization of titles
+\renewcommand\thesection{\Roman{section}} % Roman numerals for the sections
+\renewcommand\thesubsection{\Alph{subsection}} % roman numerals for subsections
+\titleformat{\section}[block]{\large\scshape\centering}{\thesection.}{1em}{} % Change the look of the section titles
+\titleformat{\subsection}[block]{\large}{\thesubsection.}{1em}{} % Change the look of the section titles
+
+\usepackage{fancyhdr} % Headers and footers
+\pagestyle{fancy} % All pages have headers and footers
+\fancyhead{} % Blank out the default header
+\fancyfoot{} % Blank out the default footer
+%\fancyhead[C]{Running title $\bullet$ May 2016 $\bullet$ Vol. XXI, No. 1} % Custom header text
+\fancyfoot[C]{\thepage} % Custom footer text
+
+\usepackage{titling} % Customizing the title section
+
+\usepackage{hyperref} % For hyperlinks in the PDF
+
+%----------------------------------------------------------------------------------------
+%	TITLE SECTION
+%----------------------------------------------------------------------------------------
+
+\setlength{\droptitle}{-4\baselineskip} % Move the title up
+
+\pretitle{\begin{center}\huge\bfseries} % Article title formatting
+	\posttitle{\end{center}} % Article title closing formatting
+
+\title{Sincronización de procesos con mútexes} % Article title
+\author{%
+	\textsc{Pablo Seijo García, Javier Pereira Romero} \\[1ex] % Your name
+	\normalsize Sistemas Operativos II\\
+	\normalsize Grupo 04 \\ % Your institution
+	\normalsize \{pablo.garcia.seijo, javier.pereira.romero\}@rai.usc.es % Your email address
+	%\and % Uncomment if 2 authors are required, duplicate these 4 lines if more
+	%\textsc{Jane Smith}\thanks{Corresponding author} \\[1ex] % Second author's name
+	%\normalsize University of Utah \\ % Second author's institution
+	%\normalsize \href{mailto:jane@smith.com}{jane@smith.com} % Second author's email address
+}
+\date{\today} % Leave empty to omit a date
+\renewcommand{\maketitlehookd}{%
+	\begin{abstract}
+		\noindent En este informe, abordaremos la resolución del problema del productor-consumidor mediante el uso de mútexes y variables de condición.  \\\mbox{}\\
+		 \textbf{\textit{Palabras clave}: Hilos, mútexes, productor-consumidor, condición de carrera, variable de condición\ldots}
+	\end{abstract}
+}
+
+%----------------------------------------------------------------------------------------
+
+\begin{document}
+	
+	% Print the title
+	\maketitle
+	
+	%----------------------------------------------------------------------------------------
+	%	ARTICLE CONTENTS
+	%----------------------------------------------------------------------------------------
+	
+	\section{Introducción}
+
+        En el presente informe se describe una serie de experimentos diseñados para estudiar las condiciones de carrera existentes en el problema denominado problema del productor-consumidor.
+        
+        Para el estudio, se realizarán varios programas breves escritos en el lenguaje de bajo nivel C, ejecutados en un sistema operativo Linux. Para la resolución del problema del productor-consumidor se implementarán los mútexes y las variables de condición como mecanismos de control.
+
+ 
+%	Introducción al problema tratado, incluyendo las referencias  necesarias. Por ejemplo: ``Este trabajo se basa en los estudios teóricos realizados en~\cite{Intel:2005} y \cite{spec}". En este apartado se plantean el problema a resolver, objetivos a alcanzar y metodología seguida para alcanzarlos.
+	
+%	Es una introducción al problema, no se desarrollarán los contenidos aquí. 
+	
+%	La introducción termina indicando en pocas palabras de qué secciones consta el resto del documento y de qué trata cada una. Se mencionan todas las secciones salvo la de referencias (bibliografía). 
+
+	%------------------------------------------------
+	
+%-------------------------------------------
+
+ 	\section{Implementación de semáforos}
+
+    Con el objetivo de solucionar el problema de las carreras críticas, se crea un nuevo tipo de variable, llamada \textbf{semáforo}. Esta variable, ademas de contar con distintas acciones de inicialización, presenta 2 funciones principales: down ($sem\_wait()$) y up ($sem\_post()$). La función down comprueba si el valor es mayor que 0. Si es así, disminuye su valor, y en caso contrario, se pone a dormir sin completar la operación. Por otro lado, la función up aumenta el valor de la variable semáforo, de manera que si algún proceso estaba inactivo en ese semáforo, despierta a uno de ellos.
+    
+    La importacia de los semáforos radica en que las acciones de comprobar el valor, modificarlo, e incluso pasar a dormir, se realizan en conjunto como una sola acción atómica indivisible. 
+    Los semáforos están vinculados a la biblioteca \textit{semaphore.h}
+
+    \begin{figure}[h]
+    \centering
+    \includegraphics[width=0.45\textwidth]{pseudocodigo_semaforos.png}
+    \caption{Pseudocódigo de la solución del problema del productor-consumidor usando semáforos}
+    \label{fig:mi_imagen}
+    \end{figure}
+
+    Para resolver nuestro problema, utilizaremos 3 semáforos: $full$, para contabilizar el número de ranuras llenas, $empty$, para contabilizar el número de ranuras vacías, y $mutex$, para asegurarse de que los procesos no accedan a la vez a la región crítica.
+
+    El semáforo $mutex$ es muy importante, pues es el que nos garantiza la exclusión mutua, de manera que solo un proceso pueda acceder al buffer compartido en un momento dado. Por otro lado, con los semaforos $full$ y $empty$ garantizamos que, por un lado el consumidor no acceda al bufer si está vacío, y por otro lado que el productor no acceda al bufer si esta lleno.
+
+    De esta forma, la carrera crítica esta resuelta, como demostraremos con una imagen.
+
+
+    \begin{figure}[h]
+    \centering
+    \includegraphics[width=0.45\textwidth]{ejemploSemaforos.png}
+    \caption{Salida del código utilizando semáforos}
+    \label{fig:mi_imagen}
+    \end{figure}
+
+
+      \section{Experimento adicional}
+
+    Las implicaciones del problema original del productor-consumidor son interesantes desde el punto de vista de la comprensión del concepto de las carreras críticas en los sistemas operativos. No obstante, en los casos prácticos se tiende a presentar formas más complejas, sofisticadas o diferentes del problema, lo que suele requerir un nivel adicional de complejidad en las soluciones presentadas.
+
+%------------------------------------------------
+	
+\section{Conclusiones}
+
+%RECORDATORIO; hablar tb de otros métodos para la sincronización de procesos
+% 1: Problema tratado y como. Explicar todas las cosas que hicimos brevemente
+% 2: Principales observaciones y problemas encontrados
+% 3: Hablar de otras soluciones (la teoría básicamente) 
+
+En el presente documento se ha tratado la ocurrencia de carreras críticas en diferentes situaciones, así como las soluciones pertinentes a cada una. Hemos trabajado en grupos de dos, y usando el sistema operativo Linux con la distribución Ubuntu, así como el lenguaje de programación de bajo nivel C.
+
+En cuánto a las principales observaciones, hemos percibido la importancia de la inclusión de las operaciones atómicas mediante los semáforos para evitar condiciones de carrera en nuestros programas. También hemos desarrollado habilidades en la implementación de dichas estructuras, así como del manejo de procesos y de hilos.
+
+Para concluír, sería beneficioso inquirir en otros aspectos relacionados con la sincronización de procesos y las carreras críticas, como podrían ser la Solución de Peterson, la instrucción TSL o algún problema similar como el problema de los filósofos.
+
+%----------------------------------------------------------------------------------------
+%	Referencias
+%----------------------------------------------------------------------------------------
+	
+\begin{thebibliography}{99} % Bibliografía - alternativamente, se recomienda el uso de bibtex o biblatex
+		
+	\bibitem[1]{Sistemas Operativos Modernos}
+    Andrew S. Tanenbaum. 
+	\newblock {\em Sistemas Operativos Modernos, 3ª edición.}
+	\newblock Editorial Prentice-Hall, 2009, secciones 2.3.4 - 2.3.5.
+%	\newblock \href{https://apps4two.com/curso_dba/bibliografia/2-Sistemas%20operativos%20moderno%203ed%20Tanenbaum.pdf}{https://apps4two.com/curso_dba/bibliografia/2Sistemasoperativosmoderno203ed20Tanenbaum.pdf}, 	\newblock [online]
+		
+\end{thebibliography}
+	
+	%----------------------------------------------------------------------------------------
+	
+\end{document}

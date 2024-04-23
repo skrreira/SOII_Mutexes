@@ -27,8 +27,12 @@ int sum_pares = 0;  //Sumas
 int sum_impares = 0;
 
 // Duración de los sleep:
-int duracion_sleep_prod;
-int duracion_sleep_cons;
+int sleep_prod;
+int sleep_insert;
+int sleep_sum_prod;
+int sleep_extract;
+int sleep_cons;
+int sleep_sum_cons;
 
 // Mútexes y variables de condición:
 pthread_mutex_t mutex;
@@ -58,12 +62,17 @@ void* consumidor(void *arg);
 int main(int argc, char** argv) {
 
     // Procesamos argumentos:
-    if (argc != 3){
-        printf("ERROR: Número de argumentos incorrecto. | Usage: %s t_prod t_cons.", argv[0]);
+    if (argc != 7){
+        printf("ERROR: Número de argumentos incorrecto. | Usage: %s sleep_produce sleep_insert sleep_sum_prod sleep_extract sleep_consume sleep_sum_cons\n.", argv[0]);
         exit(EXIT_FAILURE);
     }
-    duracion_sleep_prod = atoi(argv[1]);
-    duracion_sleep_cons = atoi(argv[2]);
+    
+    sleep_prod = atoi(argv[1]);
+    sleep_insert = atoi(argv[2]);
+    sleep_sum_prod = atoi(argv[3]);
+    sleep_extract = atoi(argv[4]);
+    sleep_cons = atoi(argv[5]);
+    sleep_sum_cons = atoi(argv[6]);
 
     // Inicializamos buffer LIFO:
     pila.buffer_count = 0;
@@ -156,7 +165,7 @@ void *productor(void *arg) {
         if (items_produced < 18){
             // Producción de items
             int item = rand() % 10;
-            sleep(duracion_sleep_prod); // Tiempo de producción
+            sleep(sleep_prod); // Tiempo de producción
             printf("Productor %d: Produciendo item %d\n", id, item);
 
             // Bloqueamos el mútex:
@@ -168,7 +177,7 @@ void *productor(void *arg) {
             // Agregar item al buffer
             pila.buffer[pila.buffer_count] = item;
             pila.buffer_count++;
-            sleep(duracion_sleep_prod); //Tiempo de agregación
+            sleep(sleep_insert); //Tiempo de agregación
             printf("Productor %d: Agregando item %d al buffer\n", id, item);
 
             // Aumentamos el número de items producidos
@@ -205,7 +214,7 @@ void *productor(void *arg) {
             pthread_mutex_unlock(&mutexProductor);    
 
             // Mensaje de éxito:
-            sleep(duracion_sleep_prod);
+            sleep(sleep_sum_prod);
             printf("Productor %d: TERMINADO. Suma de pares completada: %d\n", id, sum_pares);
             }
         }
@@ -237,12 +246,12 @@ void *consumidor(void *arg) {
 
         // Extraemos un item del buffer
         int item = pila.buffer[pila.buffer_count - 1];
-        sleep(duracion_sleep_cons);
+        sleep(sleep_extract);
         printf("Consumidor %d: Extrayendo item %d del buffer\n", id, item);
 
         // Consumimos ítem (bajamos count):
         pila.buffer_count = pila.buffer_count - 1;
-        sleep(duracion_sleep_cons);
+        sleep(sleep_cons);
         printf("Consumidor: %d Consumiendo item %d del buffer\n", id, item);
         elementos_consumidos--;
 
@@ -272,7 +281,7 @@ void *consumidor(void *arg) {
             pthread_mutex_unlock(&mutexConsumidor);
 
             // Mensaje de éxito:
-            sleep(duracion_sleep_cons);
+            sleep(sleep_sum_cons);
             printf("Consumidor %d: Suma de impares completada: %d\n", id, sum_impares);
             }
         }
