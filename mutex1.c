@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include <pthread.h>
 
-#define P 1 // productores
+#define P 5 // productores
 #define C 2 // consumidores
 #define N 12 // Tamaño del buffer
 #define T_SIZE (110 * (P + C)) // Tamaño del array T: se hara la suma
@@ -285,9 +285,7 @@ void *consumidor(void *arg) {
             printf("Consumidor %d: Suma de impares completada: %d\n", id, sum_impares);
             }
         }
-
-        //TODO: SI ES EL ÚLTIMO CONSUMIDOR HAY Q HACER UN BROADCAST AL RESTO PARA QUE SE DESPIERTEN: 18 * P
-        //! ???? ESTO SIGUE SIN IR POR ALGUN MOTIVO, LO VAMOS A DEJAR PERO EL ERROR ES OTRO
+        
         // Si es el último consumidor se despiertan al resto:
         if (elementos_consumidos == 0){
             pthread_cond_broadcast(&can_consume);
