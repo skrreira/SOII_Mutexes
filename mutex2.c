@@ -46,6 +46,108 @@ pthread_mutex_t mutex;
 pthread_mutex_t mutexSumaProd;
 pthread_mutex_t mutexSumaCons;
 
+int argumentos[P];
+
+//--------------------FUNCIONES--------------------
+
+//Funcion que inicializa el buffer a -1
+void inicializar();
+
+//Funcion que produce un item aleatorio
+int produce_item(int i);
+//Funcion que inserta un item en el buffer
+void insert_item(int item);
+//Funcion que consume un item del buffer
+int consume_item();
+
+//Funcion que suma los valores del array A
+void sumaProductor(int id);
+//Funcion que suma los valores del array B
+void sumaConsumidor(int id);
+
+//Funcion que duerme un proceso durante un tiempo
+void dormirProceso(struct timespec *req);
+
+//Funcion que define el comportamiento del productor
+void *productor(void *arg);
+//Funcion que define el comportamiento del consumidor
+void *consumidor(void *argC);
+
+//--------------------MAIN--------------------
+
+int main(int argc, char ** argv) {
+    //asignacion de los sleeps
+    if(argc<6){
+        printf("ERROR: Número de argumentos incorrecto. | Usage: %s sleep_produce sleep_insert sleep_sum_prod sleep_extract sleep_consume sleep_sum_cons\n.", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+    else{
+        sleepProducir = atoi(argv[1]);
+        sleepInsertar = atoi(argv[2]);
+        sleepSumarP = atoi(argv[3]);
+        sleepExtraer = atoi(argv[4]);
+        sleepConsumir = atoi(argv[5]);
+        sleepSumaC = atoi(argv[6]);
+    }
+    /*INICIALIZACION DE LOS ARRAYS*/
+    for (int i = 0; i < TAM_A; i++) {
+        A[i] = i;
+    }
+    for (int j = 0; j < TAM_B; j++) {
+        B[j] = j;
+    }
+    //inicializamos el buffer
+    inicializar();
+    /*DECLARACIÓN DE IDENTIFICADORES DE HILOS*/
+    pthread_t arrayProductor[P];//Declaramos el identificador del hilo productor
+    pthread_t arrayConsumidor[C];//Declaramos el identificador del hilo consumidor
+
+    /*CREACION MUTEX*/
+    if (pthread_mutex_init(&mutex, 0) != 0) {
+        printf("Error al crear mutex\n");
+        exit(EXIT_FAILURE);
+    }
+
+    if (pthread_mutex_init(&mutexSumaProd, 0) != 0) {
+        printf("Error al crear mutex\n");
+        exit(EXIT_FAILURE);
+    }
+
+    if (pthread_mutex_init(&mutexSumaCons, 0) != 0) {
+        printf("Error al crear mutex\n");
+        exit(EXIT_FAILURE);
+    }
+    
+    
+    //Creacion productores
+    for (int i = 0; i < P; i++) {
+        argumentos[i] = i;
+        pthread_create(&arrayProductor[i], NULL, productor, &argumentos[i]);
+    }
+
+    int argumentosC[C];
+    //Creacion consumidores
+    for (int j = 0; j < C; j++) {
+        argumentosC[j] = j;
+        pthread_create(&arrayConsumidor[j], NULL, consumidor, &argumentosC[j]);
+    }
+
+    /*ESPERAR A QUE LOS HILOS SE EJECUTEN*/
+    for (int i = 0; i < P; i++) {
+        pthread_join(arrayProductor[i], NULL);//Esperamos al productor
+    }
+    for (int i = 0; i < C; i++) {
+        pthread_join(arrayConsumidor[i], NULL);//Esperamos al consumidor
+    }
+
+
+    /*ELIMINAR MUTEX */
+    pthread_mutex_destroy(&mutex);
+    pthread_mutex_destroy(&mutexSumaProd);
+    pthread_mutex_destroy(&mutexSumaCons);
+    return 0;
+}
+
 /*FUNCIÓN PARA INICIALIZAR EL BUFFER A -1*/
 void inicializar() {
     int i;
@@ -81,6 +183,8 @@ int consume_item() {
     return item;//Devolvemos el elemento que ha sido consumido
 }
 
+//TODO: Revisar el rand del productor y consumidor, prod = 18 cons hasta que acabe el prod
+
 /*FUNCION PARA REALIZAR LA SUMA DE LOS PRODUCTORES*/
 void sumaProductor(int id) {
     int i;
@@ -93,14 +197,13 @@ void sumaProductor(int id) {
         sumaProd += A[i];
     }
     posA = i;
-    //printf("Productor[ID:%d]: suma actual = %d\n",id,sumaProd);
 }
 
 /*FUNCION PARA REALIZAR LA SUMA DE LOS CONSUMIDORES*/
 void sumaConsumidor(int id) {
     int i;
     sleep(sleepSumaC);
-    int numIt = rand() % 5 + 1;//numero de iteraciones que se van a realizar
+    int numIt = rand();//numero de iteraciones que se van a realizar
     int it;
     if(posB+numIt >TAM_B)it = TAM_B;
     else it = posB+numIt;
@@ -108,7 +211,6 @@ void sumaConsumidor(int id) {
         sumaCons += B[i];
     }
     posB = i;
-    //printf("Consumidor[ID:%d]: suma actual = %d\n",id,sumaCons);
 }
 
 /*FUNCION PARA CODIGO OPTATIVO*/
@@ -160,7 +262,7 @@ void *productor(void *arg) {
         }
     }
 
-    printf("Productor %d: TERMINADO. Suma de pares completada: %d\n", id, sumaProd);
+    printf("\n######## Productor %d: TERMINADO. Suma de pares completada: %d ########\n\n", id, sumaProd);
     pthread_exit(NULL);
 }
 
@@ -200,81 +302,10 @@ void *consumidor(void *argC) {
         }
     }
 
-    printf("Consumidor %d: Suma de impares completada: %d\n", idC, sumaCons);
+    printf("\n######## Consumidor %d: Suma de impares completada: %d ########\n\n", idC, sumaCons);
     pthread_exit(NULL);//Finalizamos la ejecución del hilo productor
 }
 
-int main(int argc, char ** argv) {
-    //asignacion de los sleeps
-    if(argc<6){
-        printf("ERROR: Número de argumentos incorrecto. | Usage: %s sleep_produce sleep_insert sleep_sum_prod sleep_extract sleep_consume sleep_sum_cons\n.", argv[0]);
-        exit(EXIT_FAILURE);
-    }
-    else{
-        sleepProducir = atoi(argv[1]);
-        sleepInsertar = atoi(argv[2]);
-        sleepSumarP = atoi(argv[3]);
-        sleepExtraer = atoi(argv[4]);
-        sleepConsumir = atoi(argv[5]);
-        sleepSumaC = atoi(argv[6]);
-    }
-    /*INICIALIZACION DE LOS ARRAYS*/
-    for (int i = 0; i < TAM_A; i++) {
-        A[i] = i;
-    }
-    for (int j = 0; j < TAM_B; j++) {
-        B[j] = j;
-    }
-    //inicializamos el buffer
-    inicializar();
-    /*DECLARACIÓN DE IDENTIFICADORES DE HILOS*/
-    pthread_t arrayProductor[P];//Declaramos el identificador del hilo productor
-    pthread_t arrayConsumidor[C];//Declaramos el identificador del hilo consumidor
-
-    /*CREACION MUTEX*/
-    if (pthread_mutex_init(&mutex, 0) != 0) {
-        printf("Error al crear mutex\n");
-        exit(EXIT_FAILURE);
-    }
-
-    if (pthread_mutex_init(&mutexSumaProd, 0) != 0) {
-        printf("Error al crear mutex\n");
-        exit(EXIT_FAILURE);
-    }
-
-    if (pthread_mutex_init(&mutexSumaCons, 0) != 0) {
-        printf("Error al crear mutex\n");
-        exit(EXIT_FAILURE);
-    }
-    
-    int argumentos[P];
-    //Creacion productores
-    for (int i = 0; i < P; i++) {
-        argumentos[i] = i;
-        pthread_create(&arrayProductor[i], NULL, productor, &argumentos[i]);
-    }
-    int argumentosC[C];
-    //Creacion consumidores
-    for (int j = 0; j < C; j++) {
-        argumentosC[j] = j;
-        pthread_create(&arrayConsumidor[j], NULL, consumidor, &argumentosC[j]);
-    }
-
-    /*ESPERAR A QUE LOS HILOS SE EJECUTEN*/
-    for (int i = 0; i < P; i++) {
-        pthread_join(arrayProductor[i], NULL);//Esperamos al productor
-    }
-    for (int i = 0; i < C; i++) {
-        pthread_join(arrayConsumidor[i], NULL);//Esperamos al consumidor
-    }
-
-
-    /*ELIMINAR MUTEX */
-    pthread_mutex_destroy(&mutex);
-    pthread_mutex_destroy(&mutexSumaProd);
-    pthread_mutex_destroy(&mutexSumaCons);
-    return 0;
-}
 
 
 
