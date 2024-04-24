@@ -95,53 +95,42 @@
 	
 %-------------------------------------------
 
- 	\section{Implementación de semáforos}
+\section{Descripción de la Implementación y Experimentos}
 
-    Con el objetivo de solucionar el problema de las carreras críticas, se crea un nuevo tipo de variable, llamada \textbf{semáforo}. Esta variable, ademas de contar con distintas acciones de inicialización, presenta 2 funciones principales: down ($sem\_wait()$) y up ($sem\_post()$). La función down comprueba si el valor es mayor que 0. Si es así, disminuye su valor, y en caso contrario, se pone a dormir sin completar la operación. Por otro lado, la función up aumenta el valor de la variable semáforo, de manera que si algún proceso estaba inactivo en ese semáforo, despierta a uno de ellos.
-    
-    La importacia de los semáforos radica en que las acciones de comprobar el valor, modificarlo, e incluso pasar a dormir, se realizan en conjunto como una sola acción atómica indivisible. 
-    Los semáforos están vinculados a la biblioteca \textit{semaphore.h}
+En este apartado se describe la implementación de la solución al problema del productor-consumidor modificada para manejar múltiples productores y consumidores, utilizando un buffer LIFO y variables de condición para sincronizar el acceso.
 
-    \begin{figure}[h]
-    \centering
-    \includegraphics[width=0.45\textwidth]{pseudocodigo_semaforos.png}
-    \caption{Pseudocódigo de la solución del problema del productor-consumidor usando semáforos}
-    \label{fig:mi_imagen}
-    \end{figure}
+\subsection{Estructura del Programa}
+El programa se basa en la definición de un número de productores (\textit{P}) y consumidores (\textit{C}), que interactúan mediante un buffer de tamaño (\textit{N = 12}). Cada productor produce un total de 18 ítems, asegurándose que cada ítem producido sea consumido. El acceso al buffer se controla mediante mutexes para evitar condiciones de carrera, mientras que las variables de condición ayudan a sincronizar la producción y el consumo según la capacidad del buffer.
 
-    Para resolver nuestro problema, utilizaremos 3 semáforos: $full$, para contabilizar el número de ranuras llenas, $empty$, para contabilizar el número de ranuras vacías, y $mutex$, para asegurarse de que los procesos no accedan a la vez a la región crítica.
+\subsection{Funcionamiento del Código}
+Cada productor, tras producir un ítem, intenta colocarlo en el buffer. Si el buffer está lleno, el productor se bloquea hasta que un consumidor extraiga un ítem. Similarmente, cada consumidor espera a que haya ítems disponibles para consumir. Adicionalmente, tanto productores como consumidores participan en la suma de elementos pares o impares de un arreglo global \textit{T}, respectivamente.
 
-    El semáforo $mutex$ es muy importante, pues es el que nos garantiza la exclusión mutua, de manera que solo un proceso pueda acceder al buffer compartido en un momento dado. Por otro lado, con los semaforos $full$ y $empty$ garantizamos que, por un lado el consumidor no acceda al bufer si está vacío, y por otro lado que el productor no acceda al bufer si esta lleno.
+\subsection{Parámetros de Ejecución}
+El programa se ejecuta con diferentes tiempos de espera (sleeps) introducidos para simular variadas condiciones de carga y sincronización, especificados como argumentos al iniciar el programa. Esto incluye tiempos de espera para la producción, inserción en el buffer, y sumatoria de los elementos del arreglo.
 
-    De esta forma, la carrera crítica esta resuelta, como demostraremos con una imagen.
+\section{Resultados de los Experimentos}
 
+Los experimentos se realizaron bajo dos configuraciones principales: una con 1 productor y 2 consumidores, y otra con 5 productores y 2 consumidores. Los resultados muestran cómo se comportan los productores y consumidores bajo diferentes cargas.
 
-    \begin{figure}[h]
-    \centering
-    \includegraphics[width=0.45\textwidth]{ejemploSemaforos.png}
-    \caption{Salida del código utilizando semáforos}
-    \label{fig:mi_imagen}
-    \end{figure}
+\subsection{Experimento con 3 Productores y 3 Consumidores}
 
+Este experimento, con igual número de productores y consumidores, muestra un balance más estable entre producción y consumo. Los resultados indican menos variabilidad en los tiempos de espera para ambos productores y consumidores. Esto sugiere que un número equilibrado de productores y consumidores puede mejorar la eficiencia general del sistema, manteniendo el buffer en un estado de uso óptimo.
 
-      \section{Experimento adicional}
+\subsection{Experimento con 5 Productores y 2 Consumidores}
 
-    Las implicaciones del problema original del productor-consumidor son interesantes desde el punto de vista de la comprensión del concepto de las carreras críticas en los sistemas operativos. No obstante, en los casos prácticos se tiende a presentar formas más complejas, sofisticadas o diferentes del problema, lo que suele requerir un nivel adicional de complejidad en las soluciones presentadas.
+En este experimento con más productores que consumidores, se observa una mejora notable en la disponibilidad de ítems en el buffer, lo que reduce el tiempo de espera para los consumidores. Sin embargo, la alta competencia entre los productores por acceder y modificar el arreglo \textit{T} puede introducir complejidades en la gestión del buffer. A pesar de esto, los consumidores manejan eficientemente el proceso de consumo y sumatoria de elementos impares, resaltando la efectividad de los semáforos y las variables de condición en la coordinación entre múltiples hilos.
+
+\subsection{Experimento con 2 Productores y 5 Consumidores}
+
+Este experimento demuestra cómo el sistema maneja una demanda de consumo más alta que la de producción. Los resultados muestran una rápida extracción de ítems del buffer por parte de los consumidores, lo que puede llevar a situaciones donde los productores tienen que esperar más frecuentemente a que haya espacio disponible para producir nuevos ítems. Aquí, los consumidores a menudo tienen que esperar a que los productores llenen el buffer, demostrando la eficacia de los semáforos en la regulación del acceso al buffer bajo condiciones de alta demanda de consumo. 
+
+Un factor a comentar sería que en este caso nuestro programa al finalizar de realizar las operaciones no sale del programa, y podemos sacar conclusiones de que se producen interbloqueos en el programa.
 
 %------------------------------------------------
 	
 \section{Conclusiones}
 
-%RECORDATORIO; hablar tb de otros métodos para la sincronización de procesos
-% 1: Problema tratado y como. Explicar todas las cosas que hicimos brevemente
-% 2: Principales observaciones y problemas encontrados
-% 3: Hablar de otras soluciones (la teoría básicamente) 
-
-En el presente documento se ha tratado la ocurrencia de carreras críticas en diferentes situaciones, así como las soluciones pertinentes a cada una. Hemos trabajado en grupos de dos, y usando el sistema operativo Linux con la distribución Ubuntu, así como el lenguaje de programación de bajo nivel C.
-
-En cuánto a las principales observaciones, hemos percibido la importancia de la inclusión de las operaciones atómicas mediante los semáforos para evitar condiciones de carrera en nuestros programas. También hemos desarrollado habilidades en la implementación de dichas estructuras, así como del manejo de procesos y de hilos.
-
-Para concluír, sería beneficioso inquirir en otros aspectos relacionados con la sincronización de procesos y las carreras críticas, como podrían ser la Solución de Peterson, la instrucción TSL o algún problema similar como el problema de los filósofos.
+Este informe ha demostrado la efectividad de usar mutexes y variables de condición para manejar la sincronización entre múltiples productores y consumidores en el contexto de un buffer LIFO. Los experimentos sugieren que la configuración del número de productores y consumidores, junto con los tiempos de operación adecuadamente ajustados, es crucial para el equilibrio entre la producción y el consumo y la eficiencia de la suma de elementos del arreglo.
 
 %----------------------------------------------------------------------------------------
 %	Referencias

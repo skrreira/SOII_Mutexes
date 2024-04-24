@@ -3,8 +3,8 @@
 #include <unistd.h>
 #include <pthread.h>
 
-#define P 5 // productores
-#define C 2 // consumidores
+#define P 3 // productores
+#define C 3 // consumidores
 #define N 12 // Tamaño del buffer
 #define T_SIZE (110 * (P + C)) // Tamaño del array T: se hara la suma
 
